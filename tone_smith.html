@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ToneSmith – Offline Guitar Tuner</title>
+
+<!-- =============================================== -->
+<!--  Styles                                         -->
+<!-- =============================================== -->
+<style>
+:root {
+  --bg: #141414;
+  --panel: #1e1e1e;
+  --accent: #1db954;
+  --accent-flat: #3d6aff;
+  --accent-sharp: #ff4b4b;
+  --text: #f3f3f3;
+  --sub: #c3c3c3;
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; }
+html,body { height: 100%; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
+
+header { padding: 1rem; text-align: center; background: var(--panel); box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+header h1 { font-size: 1.6rem; letter-spacing: .5px; }
+
+main { padding: 1rem; max-width: 900px; margin: auto; display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* --------------------  Base A4 Control  ----------- */
+.base-wrap { display: flex; flex-direction: column; gap: .6rem; background: var(--panel); padding: 1rem; border-radius: var(--radius); }
+.base-top { display: flex; align-items: center; gap: .6rem; }
+#baseInput { width: 90px; padding: .3rem .4rem; border-radius: 6px; border: 1px solid var(--sub); background: #2a2a2a; color: var(--text); }
+#baseSlider { flex: 1; }
+
+/* --------------------  Gauge  --------------------- */
+.gauge { display: flex; flex-direction: column; align-items: center; gap: .25rem; user-select: none; }
+.gauge .note  { font-size: 2rem; font-weight: 600; color: var(--accent); }
+.gauge .freq  { font-size: 1rem; }
+.gauge .delta { font-size: 1rem; color: var(--sub); }
+
+.gauge svg { width: 240px; height: 120px; }
+.needle-wrap { position: relative; width: 240px; height: 0; }
+.needle { position: absolute; left: 50%; bottom: 0; width: 4px; height: 100px; background: var(--text); transform-origin: bottom center; transition: transform .05s linear; }
+.status { margin-top: .4rem; font-size: 1rem; font-weight: 500; }
+
+/* --------------------  String Rows  --------------- */
+.rows { display: flex; flex-direction: column; gap: .45rem; }
+.row { display: grid; grid-template-columns: 90px 92px 1fr 60px; align-items: center; background: var(--panel); padding: .45rem .6rem; border-radius: var(--radius); }
+
+select, input.rowFreqInput {
+  background: #2a2a2a; border: 1px solid var(--sub); color: var(--text); font-size: .95rem; border-radius: 6px; padding: .2rem .4rem;
+}
+select { width: 82px; }
+input.rowFreqInput { width: 80px; text-align: right; }
+
+.bar-wrap { background: #303030; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
+.bar { position: absolute; top: 0; bottom: 0; width: 100%; transform-origin: left; background: var(--accent); transition: background .15s, transform .05s; }
+.deltaCell { font-variant-numeric: tabular-nums; text-align: right; font-size: .9rem; }
+
+/* --------------------  Buttons & Others ----------- */
+#startBtn { align-self: center; padding: .6rem 1.6rem; font-size: 1rem; border: none; border-radius: var(--radius); background: var(--accent); color: #fff; cursor: pointer; }
+#startBtn:disabled { opacity: .55; cursor: not-allowed; }
+
+.advert-box { background: var(--panel); color: var(--sub); border: 1px solid var(--sub); border-radius: var(--radius); padding: 1rem; text-align: center; font-size: .9rem; }
+
+footer { text-align: center; font-size: .8rem; color: var(--sub); padding: 1rem 0; }
+
+/* --------------------  Mobile Compact ------------- */
+@media (max-width: 600px) {
+  header      { transform: scale(.85); transform-origin: top center; }
+  header h1   { font-size: 1.4rem; }
+  .base-wrap,
+  .rows,
+  .advert-box,
+  #startBtn   { transform: scale(.85); transform-origin: top center; }
+  main        { gap: .8rem; }
+}
+</style>
+</head>
+
+<body>
+<header><h1>🎸 ToneSmith – Offline Guitar Tuner</h1></header>
+<main>
+  <!-- Base A4 Frequency ---------------------------------------------- -->
+  <div class="base-wrap">
+    <div class="base-top">
+      <label for="baseInput">A₄ Base (Hz):</label>
+      <input id="baseInput" type="number" min="300" max="500" step="1" value="440" />
+    </div>
+    <input id="baseSlider" type="range" min="300" max="500" step="1" value="440" />
+  </div>
+
+  <!-- Gauge ----------------------------------------------------------- -->
+  <section class="gauge">
+    <div id="gNote"  class="note">—</div>
+    <div id="gFreq"  class="freq">— Hz</div>
+    <div id="gDelta" class="delta">±0 cents</div>
+
+    <svg viewBox="0 0 240 120">
+      <path d="M20 110 A100 100 0 0 1 220 110" stroke="#444" stroke-width="4" fill="none" />
+      <text x="20"  y="100" text-anchor="middle" fill="var(--text)" font-size="14" dominant-baseline="central">♭</text>
+      <text x="220" y="100" text-anchor="middle" fill="var(--text)" font-size="14" dominant-baseline="central">♯</text>
+    </svg>
+    <div class="needle-wrap"><div id="needle" class="needle"></div></div>
+    <div id="gStatus" class="status">Press “Start tuner”</div>
+  </section>
+
+  <!-- String Rows ----------------------------------------------------- -->
+  <div id="rows" class="rows"></div>
+
+  <!-- Advert Box ------------------------------------------------------ -->
+  <div class="advert-box"><p>Your Ad Here</p></div>
+
+  <button id="startBtn">Start tuner</button>
+</main>
+<footer>Software by Ingeniarch 2025</footer>
+
+<!-- =============================================== -->
+<!--  Script                                         -->
+<!-- =============================================== -->
+<script>
+const NOTE_NAMES      = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const DEFAULT_STRINGS = ["E2","A2","D3","G3","B3","E4"];
+let baseFreq          = 440;
+const stringNotes     = [...DEFAULT_STRINGS];
+const targets         = new Array(6);
+
+const baseInput  = document.getElementById('baseInput');
+const baseSlider = document.getElementById('baseSlider');
+const rowsEl     = document.getElementById('rows');
+const gNote      = document.getElementById('gNote');
+const gFreq      = document.getElementById('gFreq');
+const gDelta     = document.getElementById('gDelta');
+const gStatus    = document.getElementById('gStatus');
+const needle     = document.getElementById('needle');
+const startBtn   = document.getElementById('startBtn');
+
+// --------------------  Helpers  --------------------
+function noteToMidi(n){ const m=n.match(/^([A-G]#?)(-?\d)$/); return m?NOTE_NAMES.indexOf(m[1])+12*(+m[2]+1):0; }
+function midiToFreq(m){ return baseFreq * Math.pow(2,(m-69)/12); }
+function centsOff(d,t){ return 1200*Math.log2(d/t); }
+function updateTargets(){ for(let i=0;i<6;i++) targets[i]=midiToFreq(noteToMidi(stringNotes[i])); }
+
+// --------------------  Build Rows  ----------------
+const rows = [];
+const noteOptions=[];
+for(let o=-1;o<=6;o++) NOTE_NAMES.forEach(n=>noteOptions.push(n+o));
+for(let i=0;i<6;i++){
+  const row=document.createElement('div'); row.className='row';
+
+  // note select
+  const sel=document.createElement('select');
+  noteOptions.forEach(n=>{ const opt=document.createElement('option'); opt.value=n; opt.textContent=n; sel.appendChild(opt); });
+  sel.value=DEFAULT_STRINGS[i];
+  sel.onchange=()=>{ stringNotes[i]=sel.value; updateTargets(); refreshRows(); };
+  row.appendChild(sel);
+
+  // frequency input
+  const inp=document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.min='20'; inp.max='1000'; inp.className='rowFreqInput';
+  row.appendChild(inp);
+
+  // bar visual
+  const bw=document.createElement('div'); bw.className='bar-wrap';
+  const bar=document.createElement('div'); bar.className='bar'; bw.appendChild(bar); row.appendChild(bw);
+
+  // cents delta
+  const delta=document.createElement('div'); delta.className='deltaCell'; row.appendChild(delta);
+
+  rowsEl.appendChild(row);
+  rows.push({sel,inp,bar,delta});
+
+  inp.oninput=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)&&v>0){ targets[i]=v; refreshRows(false);} };
+}
+
+function refreshRows(updateInputs=true){
+  rows.forEach((r,i)=>{
+    if(updateInputs) r.inp.value=targets[i].toFixed(1);
+    r.bar.style.transform='scaleX(0)';
+    r.bar.style.background='var(--accent)';
+    r.delta.textContent='';
+  });
+}
+updateTargets(); refreshRows();
+
+// --------------------  Base A4 Sync  --------------
+function setBase(v){ baseFreq=Math.max(300,Math.min(500,Number(v)||440)); baseInput.value=baseFreq; baseSlider.value=baseFreq; updateTargets(); refreshRows(); }
+baseInput.oninput=e=>setBase(e.target.value);
+baseSlider.oninput=e=>setBase(e.target.value);
+
+// --------------------  Pitch Detection ------------
+function autoCorrelate(buf,sr){
+  const SIZE=buf.length; let rms=0; for(let i=0;i<SIZE;i++) rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/SIZE); if(rms<0.01) return -1;
+  let r1=0,r2=SIZE-1,thr=0.2; for(let i=0;i<SIZE/2;i++){ if(Math.abs(buf[i])<thr){ r1=i; break;} }
+  for(let i=1;i<SIZE/2;i++){ if(Math.abs(buf[SIZE-i])<thr){ r2=SIZE-i; break;} }
+  buf=buf.slice(r1,r2);
+  const c=new Array(buf.length).fill(0);
+  for(let lag=0;lag<c.length;lag++) for(let i=0;i<c.length-lag;i++) c[lag]+=buf[i]*buf[i+lag];
+  let d=0; while(c[d]>c[d+1]) d++;
+  let maxPos=d, maxVal=c[d]; for(let i=d;i<c.length;i++){ if(c[i]>maxVal){ maxVal=c[i]; maxPos=i; } }
+  return sr/maxPos;
+}
+
+let audioCtx, analyser, buf;
+startBtn.onclick=async()=>{
+  startBtn.disabled=true; startBtn.textContent='Running…';
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)(); await audioCtx.resume();
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  analyser=audioCtx.createAnalyser(); analyser.fftSize=2048; buf=new Float32Array(analyser.fftSize);
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  gStatus.textContent='Listening…';
+  requestAnimationFrame(loop);
+};
+
+function loop(){ analyser.getFloatTimeDomainData(buf); const pitch=autoCorrelate(buf,audioCtx.sampleRate); if(pitch>0&&pitch<2000) draw(pitch); requestAnimationFrame(loop); }
+
+function draw(pitch){
+  // find closest string target
+  let best=-1, cent=Infinity;
+  targets.forEach((t,i)=>{ const c=centsOff(pitch,t); if(Math.abs(c)<Math.abs(cent)){ cent=c; best=i; } });
+  if(best===-1) return;
+
+  rows.forEach((r,i)=>{
+    if(i===best){ const pct=Math.min(1,Math.abs(cent)/50); r.bar.style.transform=`scaleX(${pct})`; r.bar.style.background=Math.abs(cent)<=5?'var(--accent)':(cent>0?'var(--accent-sharp)':'var(--accent-flat)'); r.delta.textContent=(cent>0?'+':'')+cent.toFixed(0)+'¢'; }
+    else { r.bar.style.transform='scaleX(0)'; r.delta.textContent=''; }
+  });
+
+  // gauge
+  needle.style.transform=`translateX(-50%) rotate(${Math.max(-90,Math.min(90,(cent/100)*90))}deg)`;
+  gNote.textContent=stringNotes[best];
+  gFreq.textContent=pitch.toFixed(1)+' Hz';
+  gDelta.textContent=(cent>0?'+':'')+cent.toFixed(0)+' cents';
+  if(Math.abs(cent)<=5){ gStatus.textContent='In tune'; gStatus.style.color='var(--accent)'; }
+  else if(cent>0){ gStatus.textContent='Sharp'; gStatus.style.color='var(--accent-sharp)'; }
+  else { gStatus.textContent='Flat'; gStatus.style.color='var(--accent-flat)'; }
+}
+</script>
+</body>
+</html>
